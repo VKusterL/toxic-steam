@@ -1,0 +1,1 @@
+{"fold": 6, "n_test": 6000, "auc_pr": 0.6166484772573144, "auc_roc": 0.9680121527777779, "f1_macro": 0.7909407665505226, "precision_pos": 0.5571428571428572, "recall_pos": 0.65, "f1_pos": 0.6, "kappa": 0.5819935691318328, "threshold": 0.9754065326410322, "threshold_source": "validation", "n_val": 5400, "val_auc_pr": 0.608974520648182, "val_auc_roc": 0.9617582233081847}

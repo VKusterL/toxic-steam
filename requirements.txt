@@ -1,0 +1,43 @@
+# Toxic Steam: User Toxicity Predictor (English-only) dependencies.
+# Python 3.13 (Anaconda). Seed = 42 everywhere.
+# Versions are pinned to the ones actually used in the study
+# (verified through importlib.metadata).
+#
+# torch: the wheel used is +cu124 (CUDA 12.4, GPU GTX 1070 / Pascal sm_61).
+# To reproduce the GPU environment, install torch from the CUDA index BEFORE
+# the rest:
+#     pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+# For a CPU-only setup: pip install torch==2.6.0
+# Then: pip install -r requirements.txt
+
+# --- data core / classical models ---
+duckdb==1.5.3
+pandas==3.0.3
+numpy==2.3.5
+scikit-learn==1.7.2
+scipy==1.16.3
+pyarrow==24.0.0
+openpyxl==3.1.5            # reading the human-annotation spreadsheets
+joblib==1.5.2
+tqdm==4.67.1
+matplotlib==3.10.9         # figures (EDA, ablations, LTO, heatmaps)
+
+# --- trees / boosting / explainability ---
+xgboost==3.2.0
+lightgbm==4.6.0
+catboost==1.2.10
+shap==0.51.0
+
+# --- transformers / embeddings ---
+torch==2.6.0
+transformers==5.8.0
+sentence-transformers==5.4.1
+
+# --- LLM backends ---
+anthropic==0.107.1         # Claude Opus (generator / classifier), needs ANTHROPIC_API_KEY
+openai==2.34.0             # GPT-4o (LLM-as-a-judge), needs OPENAI_API_KEY
+
+# --- external, non-pip dependencies ---
+# Ollama 0.30.6 with local models llama3.1:8b and qwen2.5:7b (https://ollama.com).
+#   Start it with:  ollama serve   (serving on http://localhost:11434)
+# Windows/Anaconda note: set KMP_DUPLICATE_LIB_OK=TRUE before importing torch.

@@ -1,0 +1,10 @@
+.DS_Store
+.idea
+__pycache__/
+
+# Run artifacts / intermediate data - these live in ../steam-data, not in the repo
+*.parquet
+*.npy
+
+# Manual backup copies of chapter drafts
+* - cópia.*
