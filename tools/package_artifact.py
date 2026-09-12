@@ -33,7 +33,7 @@ CLASSICAL_RESULTS = {
 # These reviewed additions can be exported before they are committed. Other new
 # files are never picked up implicitly; review and commit them first.
 EXTRA_FILES = {
-    "docs/artifact.md", "docs/paper_delivery.md", "tools/package_artifact.py",
+    "docs/artifact.md", "tools/package_artifact.py",
     "tools/package_paper.py", "tools/check_paper_layout.py",
     "characterization/verify_numbers.py",
     "characterization/figures/check_figures.py",
@@ -198,6 +198,10 @@ def build(root: Path, output: Path) -> dict:
         raise ValueError("Output must not be a symlink or escape dist")
     result = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], check=True, capture_output=True)
     tracked = set(result.stdout.decode("utf-8").rstrip("\0").split("\0")) - {""}
+    # Honor working-tree deletions even before their removal is committed.
+    deleted = subprocess.run(["git", "-C", str(root), "ls-files", "--deleted", "-z"],
+                             check=True, capture_output=True)
+    tracked.difference_update(deleted.stdout.decode("utf-8").rstrip("\0").split("\0"))
     candidates = tracked | {name for name in EXTRA_FILES if (root / name).is_file()}
     files = []
     payloads = {}

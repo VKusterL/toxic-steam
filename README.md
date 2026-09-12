@@ -2,7 +2,7 @@
 
 This repository holds the code and quantitative results behind the study *"Toxic Steam: A Large-Scale Characterization and Prediction of Toxic Users in a Gaming Platform"*, accepted at AIIDE 2026. It is organized so that a reader can inspect the supplied results or run the modeling pipeline with a separately held corpus.
 
-For the optional artifact evaluation, start with [docs/artifact.md](docs/artifact.md). Generate the public package with `python tools/package_artifact.py`; it excludes identifiable user-level outputs and Git history while preserving the research originals. See [docs/results.md](docs/results.md) for the exact coverage and remaining provenance gaps. The corrected paper has a separate Overleaf delivery described in [docs/paper_delivery.md](docs/paper_delivery.md).
+For the optional artifact evaluation, start with [docs/artifact.md](docs/artifact.md). Generate the public package with `python tools/package_artifact.py`; it excludes identifiable user-level outputs and Git history while preserving the research originals. See [docs/results.md](docs/results.md) for the exact coverage and remaining provenance gaps.
 
 Steam is one of the largest digital distribution platforms for PC games, and its user reviews form a public arena where toxic discourse frequently slips past moderation. Most automatic tooling scores each review in isolation and says little about the people who repeatedly produce toxic content, even though those users are the more practical target for platform-level moderation. This work looks at toxicity from both angles. It first characterizes how toxic language manifests across 36.8 million English-language reviews written by 14.1 million users, and then asks whether toxic users can be predicted from account-level data, and whether general-purpose Large Language Models (LLMs) can support that decision as classifiers and as explanation generators.
 
@@ -69,7 +69,6 @@ The take-away is that user-level toxicity prediction is best positioned as a tri
 │   ├── results.md                Full result tables and statistical tests
 │   ├── reproducibility.md        Environment, seeds, hardware, determinism
 │   ├── artifact.md               Public export and reviewer guide
-│   ├── paper_delivery.md         Corrected manuscript and Overleaf instructions
 │   └── ethics.md                 Responsible use and limitations
 ├── tools/                    Publication packaging and PDF layout checks
 └── results/                  Research results; export filters identifiable records
