@@ -1,0 +1,80 @@
+{
+  "language": "en",
+  "rows_read": 36823127,
+  "rows_kept": 36823127,
+  "rows_dropped_invalid": 0,
+  "games_with_reviews": 67477,
+  "reviews_toxic": 685536,
+  "games_covered": 66729,
+  "games_uncovered": 748,
+  "reviews_covered": 36818360,
+  "reviews_toxic_covered": 685475,
+  "tags_total": 447,
+  "volume_quantile": 0.9,
+  "volume_threshold_reviews": 3948954.800000002,
+  "tags_qualified": 45,
+  "top_n": 10,
+  "top_tags": [
+    {
+      "tag": "Team-Based",
+      "n_reviews": 4785061,
+      "n_toxic": 140172,
+      "toxicity_pct": 2.929367044641646
+    },
+    {
+      "tag": "Competitive",
+      "n_reviews": 4469140,
+      "n_toxic": 129780,
+      "toxicity_pct": 2.9039143996384094
+    },
+    {
+      "tag": "Gore",
+      "n_reviews": 5718317,
+      "n_toxic": 151793,
+      "toxicity_pct": 2.654504813216896
+    },
+    {
+      "tag": "FPS",
+      "n_reviews": 9302848,
+      "n_toxic": 242991,
+      "toxicity_pct": 2.6120065597116064
+    },
+    {
+      "tag": "PvP",
+      "n_reviews": 7651745,
+      "n_toxic": 196634,
+      "toxicity_pct": 2.569792903448821
+    },
+    {
+      "tag": "Shooter",
+      "n_reviews": 11000738,
+      "n_toxic": 281229,
+      "toxicity_pct": 2.556455757786432
+    },
+    {
+      "tag": "Free to Play",
+      "n_reviews": 5665698,
+      "n_toxic": 141179,
+      "toxicity_pct": 2.491820072301771
+    },
+    {
+      "tag": "Violent",
+      "n_reviews": 5416391,
+      "n_toxic": 132902,
+      "toxicity_pct": 2.4537002590839547
+    },
+    {
+      "tag": "Comedy",
+      "n_reviews": 4320991,
+      "n_toxic": 105836,
+      "toxicity_pct": 2.449345532078174
+    },
+    {
+      "tag": "Military",
+      "n_reviews": 4698719,
+      "n_toxic": 113868,
+      "toxicity_pct": 2.4233839052729054
+    }
+  ],
+  "figure_path": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\top-10-tags-tox.pdf"
+}

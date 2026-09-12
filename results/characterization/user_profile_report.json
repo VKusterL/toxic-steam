@@ -1,0 +1,55 @@
+{
+  "language": "en",
+  "rows_read": 36823127,
+  "rows_kept": 36823127,
+  "rows_dropped_invalid": 0,
+  "users_total": 14183630,
+  "users_toxic": 560079,
+  "toxic_reviews": 685536,
+  "toxic_reviews_recommended": 394324,
+  "toxic_reviews_recommended_pct": 57.520538673388415,
+  "user_counts_cached": true,
+  "users_with_steamid": 9177483,
+  "users_matched": 6204110,
+  "medians": {
+    "reviews_per_user": {
+      "non_toxic": 1.0,
+      "non_toxic_n": 13623551,
+      "toxic": 3.0,
+      "toxic_n": 560079
+    },
+    "library_size": {
+      "non_toxic": 74.0,
+      "non_toxic_n": 1873715,
+      "toxic": 102.0,
+      "toxic_n": 101316
+    },
+    "steam_level": {
+      "non_toxic": 10.0,
+      "non_toxic_n": 4861266,
+      "non_toxic_zeros_not_drawn": 3984,
+      "toxic": 12.0,
+      "toxic_n": 205846,
+      "toxic_zeros_not_drawn": 77
+    }
+  },
+  "ban_rates": {
+    "toxic_n": 560079,
+    "toxic_matched": 246717,
+    "toxic_banned": 7687,
+    "toxic_ban_pct": 1.3724849530155567,
+    "toxic_ban_pct_matched": 3.115715576956594,
+    "non_toxic_n": 13623551,
+    "non_toxic_matched": 5957393,
+    "non_toxic_banned": 160278,
+    "non_toxic_ban_pct": 1.1764774103315647,
+    "non_toxic_ban_pct_matched": 2.690405014408148
+  },
+  "figures": {
+    "reviews_per_user": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\cdf-reviews-per-user.pdf",
+    "library_size": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\cdf-library-size.pdf",
+    "steam_level": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\cdf-steam-level.pdf",
+    "legend": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\cdf-legend.pdf"
+  },
+  "note": "reviews_per_user is computed over every user in the corpus; library_size and profile_level only over users matched to a collected public profile. Ban rates are given both ways: *_ban_pct divides by every user in the group, which is the paper's 1.4% vs 1.2%, and *_ban_pct_matched divides by the matched profiles where the flag was actually observed."
+}

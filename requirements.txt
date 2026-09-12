@@ -1,5 +1,5 @@
 # Toxic Steam: User Toxicity Predictor (English-only) dependencies.
-# Python 3.13 (Anaconda). Seed = 42 everywhere.
+# Python 3.13 (Anaconda). Base seed = 42; derived seeds are documented in code.
 # Versions are pinned to the ones actually used in the study
 # (verified through importlib.metadata).
 #
@@ -32,6 +32,8 @@ shap==0.51.0
 torch==2.6.0
 transformers==5.8.0
 sentence-transformers==5.4.1
+# Required by up_bert_user.py's SummaryWriter; original run version not recorded.
+tensorboard>=2.18,<3
 
 # --- LLM backends ---
 anthropic==0.107.1         # Claude Opus (generator / classifier), needs ANTHROPIC_API_KEY

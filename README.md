@@ -1,6 +1,8 @@
 # Toxic Steam: A Large-Scale Characterization and Prediction of Toxic Users in a Gaming Platform
 
-This repository holds the code and quantitative results behind the study *"Toxic Steam: A Large-Scale Characterization and Prediction of Toxic Users in a Gaming Platform"*, currently under review at an international venue. It is organized so that a reader can inspect the results directly or re-run the full user-level modeling pipeline.
+This repository holds the code and quantitative results behind the study *"Toxic Steam: A Large-Scale Characterization and Prediction of Toxic Users in a Gaming Platform"*, accepted at AIIDE 2026. It is organized so that a reader can inspect the supplied results or run the modeling pipeline with a separately held corpus.
+
+For the optional artifact evaluation, start with [docs/artifact.md](docs/artifact.md). Generate the public package with `python tools/package_artifact.py`; it excludes identifiable user-level outputs and Git history while preserving the research originals. See [docs/results.md](docs/results.md) for the exact coverage and remaining provenance gaps. The corrected paper has a separate Overleaf delivery described in [docs/paper_delivery.md](docs/paper_delivery.md).
 
 Steam is one of the largest digital distribution platforms for PC games, and its user reviews form a public arena where toxic discourse frequently slips past moderation. Most automatic tooling scores each review in isolation and says little about the people who repeatedly produce toxic content, even though those users are the more practical target for platform-level moderation. This work looks at toxicity from both angles. It first characterizes how toxic language manifests across 36.8 million English-language reviews written by 14.1 million users, and then asks whether toxic users can be predicted from account-level data, and whether general-purpose Large Language Models (LLMs) can support that decision as classifiers and as explanation generators.
 
@@ -66,8 +68,12 @@ The take-away is that user-level toxicity prediction is best positioned as a tri
 │   ├── data.md                   Data collection, labeling, feature groups, availability
 │   ├── results.md                Full result tables and statistical tests
 │   ├── reproducibility.md        Environment, seeds, hardware, determinism
+│   ├── artifact.md               Public export and reviewer guide
+│   ├── paper_delivery.md         Corrected manuscript and Overleaf instructions
 │   └── ethics.md                 Responsible use and limitations
-└── results/                  Small, shareable numeric result artifacts (no raw data)
+├── tools/                    Publication packaging and PDF layout checks
+└── results/                  Research results; export filters identifiable records
+    ├── characterization/         RQ1 counts, rates, TF-IDF matrix, verification reports
     ├── replication/              Classical models: metrics, out-of-fold summaries, LTO, balanced
     ├── replication_bert*/        DistilBERT fold metrics (MiniLM, MPNet, undersampled)
     ├── replication_mpnet/        MPNet robustness check
@@ -80,8 +86,9 @@ corpus construction, the toxicity labeling and its calibration, the lexical
 and contextual analysis, and the figures. Everything else - `src/`,
 `docs/`, `results/`, `notebooks/` - is the user-level prediction benchmark
 (RQ2 and RQ3). The two were run separately and expect their data in
-different places: the prediction pipeline reads `data/`, the
-characterization pipeline reads `steam-data/`.
+different historical layouts. The commands below use `data/` for both;
+some characterization step READMEs retain the earlier `steam-data/`
+examples, whose paths are configurable through command-line arguments.
 
 ## Data availability and ethics
 
@@ -89,7 +96,7 @@ The raw review, user, and game data are **not distributed** with this repository
 
 The user-level predictor is a research and measurement instrument, not a moderation oracle. Its labels are tool-derived and partially circular, its estimates carry real uncertainty, and it should only ever inform aggregate analysis or human-review triage, never an automatic verdict on an individual. See [docs/ethics.md](docs/ethics.md) for the full discussion.
 
-Because the corpus is not shipped, the scripts under `src/` document and reproduce the pipeline end to end, but running them requires the collected parquet corpus in place under `data/`. The committed `results/` directory contains the small numeric summaries that back every claim in the paper. Figures are not committed; `src/up_plots.py` regenerates them locally from those summaries.
+Running `src/` requires the collected parquet corpus under `data/` and the intermediate outputs described in [docs/pipeline.md](docs/pipeline.md). Supplied summaries support many paper results, but the four confirmatory tests and some balanced-evaluation results lack their original aggregate exports. The research checkout also contains identifiable per-user predictions and narrative records, excluded from the public artifact ZIP. Figures are generated locally: `characterization/figures/` produces the manuscript figures; `src/up_plots.py` produces exploratory prediction plots and requires excluded intermediates for most of them.
 
 ## Setup
 
@@ -117,39 +124,89 @@ On Windows with Anaconda, set `KMP_DUPLICATE_LIB_OK=TRUE` before importing torch
 
 ## Reproducing the characterization (RQ1)
 
-The characterization half lives in [characterization/](characterization/) and runs on its own, before and independently of the prediction pipeline. Three numbered steps plus three cross-cutting tools; each step reads the previous one's output. Commands run from inside each step's folder, and expect the collected corpus in `steam-data/` next to `characterization/`. Full detail, including the cluster tuning that actually worked, is in [characterization/README.md](characterization/README.md).
+The characterization half lives in [characterization/](characterization/) and runs on its own, before and independently of the prediction pipeline. Three numbered steps plus three cross-cutting tools; each step reads the previous one's output. Full detail, including the cluster tuning that actually worked, is in [characterization/README.md](characterization/README.md).
+
+Steps 1 and 2 rebuild the corpus from the raw scrape. If you already hold the scored corpus (`data/corpus/reviews_w_detoxify/`), start at step 3 - the figures and the verification read it directly.
 
 ```bash
 # 1) Corpus: clean games/users/reviews, deduplicate, assign language
 cd characterization/step01_cleaning_and_language_detection
-python run_clean_games.py  --input ../../steam-data/raw/games/todos_jogos.json --output ../../steam-data/step01-output/games/games.parquet
-python run_clean_users.py  --input ../../steam-data/raw/users  --output ../../steam-data/step01-output/users/all_users.parquet
-python run_clean_reviews_dedup_noshuffle.py --input ../../steam-data/raw/reviews --output ../../steam-data/step01-output/reviews_deduped.parquet
-python run_detect_language.py --input ../../steam-data/step01-output/reviews_deduped.parquet --output-dir ../../steam-data/step01-output/reviews_by_lang
+python run_clean_games.py \
+  --input ../../data/raw/games/todos_jogos.json \
+  --output ../../data/corpus/games/games.parquet
+python run_clean_users.py \
+  --input ../../data/raw/users \
+  --output ../../data/corpus/users/all_users.parquet
+python run_clean_reviews_dedup_noshuffle.py \
+  --input ../../data/raw/reviews \
+  --output ../../data/corpus/reviews_deduped.parquet
+python run_detect_language.py \
+  --input ../../data/corpus/reviews_deduped.parquet \
+  --output-dir ../../data/corpus/reviews_by_lang
 
 # 2) Toxicity: Detoxify scoring, model agreement, the calibrated union label
 cd ../step02_run_detoxify
-python run_detoxify.py          --input ../../steam-data/step01-output/reviews_by_lang/reviews_cleaned.parquet --output-dir ../../steam-data/step02-output
-python run_score_correlation.py --input ../../steam-data/step02-output --output ../../steam-data/step02-output/score_correlation_report.json
-python run_toxicity_mask.py     --input ../../steam-data/step02-output --output ../../steam-data/step02-output/toxicity_report.json
+python run_detoxify.py \
+  --input ../../data/corpus/reviews_by_lang \
+  --output-dir ../../data/corpus/reviews_w_detoxify
+python run_score_correlation.py \
+  --input ../../data/corpus/reviews_w_detoxify \
+  --output ../../data/corpus/score_correlation_report.json
+python run_toxicity_mask.py \
+  --input ../../data/corpus/reviews_w_detoxify \
+  --output ../../data/corpus/toxicity_report.json
 
 # 3) Lexicon: TF-IDF toxic vs. non-toxic, then the paper's top-terms table
 cd ../step03_tfidf_analysis
-python run_tfidf.py     --input ../../steam-data/step02-output --output-dir ../../steam-data/step03-output --lang en
-python run_top_terms.py --input ../../steam-data/step03-output/tfidf_lexicon_en.csv --output ../../steam-data/step03-output/top_terms_en.csv
+python run_tfidf.py \
+  --input ../../data/corpus/reviews_w_detoxify \
+  --output-dir ../../data/step03-output --lang en
+python run_top_terms.py \
+  --input ../../data/step03-output/tfidf_lexicon_en.csv \
+  --output ../../data/step03-output/top_terms_en.csv
 
 # Threshold calibration (reads the annotation spreadsheets only, no pipeline output)
 cd ../annotation_agreement
-python run_agreement_table.py --input ../../steam-data/raw/annotations --output ../../steam-data/annotation-output/agreement_table.json
+python run_agreement_table.py \
+  --input ../../data/raw/annotations \
+  --output ../../data/annotation-output/agreement_table.json
 
-# Figures: run_tag_toxicity.py first, the heatmap reuses its tag list
+# Figures: run_tag_toxicity.py first, the heatmap reuses its tag list.
+# The heatmap streams the corpus rather than loading it - see its README.
 cd ../figures
-python run_tag_toxicity.py      --games ../../steam-data/step01-output/games/games.parquet --step02-dir ../../steam-data/step02-output --output-dir ../../steam-data/figures-output
-python run_tag_tfidf_heatmap.py --labeled ../../steam-data/step03-output/reviews_cleaned_labeled_en.parquet --lexicon ../../steam-data/step03-output/tfidf_lexicon_en.csv --games ../../steam-data/step01-output/games/games.parquet --top-tags ../../steam-data/figures-output/tag_toxicity_top.csv --output-dir ../../steam-data/figures-output
-python run_user_profile.py      --users ../../steam-data/step01-output/users/all_users.parquet --step02-dir ../../steam-data/step02-output --output-dir ../../steam-data/figures-output
+python run_tag_toxicity.py \
+  --games ../../data/corpus/games/games.parquet \
+  --step02-dir ../../data/corpus/reviews_w_detoxify \
+  --output-dir ../../data/figures-output
+python run_tag_tfidf_heatmap.py \
+  --step02-dir ../../data/corpus/reviews_w_detoxify \
+  --fit-cache ../../data/figures-cache/corpus_fit_en.npz \
+  --games ../../data/corpus/games/games.parquet \
+  --output-dir ../../data/figures-output \
+  --tag "Team-Based" --tag "Competitive" --tag "PvP" --tag "FPS" --tag "Shooter" \
+  --tag "Military" --tag "Free to Play" --tag "Gore" --tag "Violent" --tag "Comedy" \
+  --term sucks --term ass --term trash --term kill --term suck --term stupid \
+  --term garbage --term balls --term like --term good --term people --term fun
+python run_user_profile.py \
+  --users ../../data/corpus/users/all_users.parquet \
+  --step02-dir ../../data/corpus/reviews_w_detoxify \
+  --output-dir ../../data/figures-output \
+  --user-counts ../../data/figures-cache/user_counts_en.parquet
 ```
 
-The figure PDFs land under the filenames `main.tex` expects, so they copy into `main/images/` with no renaming.
+Two checks close the loop, and both exit non-zero on failure:
+
+```bash
+# Recompute all 26 numbers the characterization section states
+python characterization/verify_numbers.py --data data \
+    --output results/characterization/corpus_verification.json
+
+# Confirm every figure is authored at the width its \includegraphics uses,
+# and that no label lands under AAAI's 7pt floor
+python characterization/figures/check_figures.py --dir data/figures-output
+```
+
+The figure PDFs land under the filenames `main.tex` expects, so they copy into `main/images/` with no renaming - each at the width its include gives it, so LaTeX scales them by 1.0 and the type sizes survive. `characterization/figures/README.md` records which include width each file is built for.
 
 ## Reproducing the prediction benchmark (RQ2, RQ3)
 
@@ -160,14 +217,14 @@ Every stage is a standalone script that reads the artifacts produced by earlier 
 python src/build_features.py --root . --out data/features --langs en
 
 # 2) Modeling substrate: 10 percent deterministic slice, count/rate labels, CV folds
-python src/up_build_dataset.py
+python src/up_build_dataset.py --kfolds 5
 
 # 3) Text representation: per-review Sentence-BERT cache, then one vector per user
 python src/up_embed_reviews.py
 python src/up_user_vectors.py
 
 # 4) Classical benchmark: feature-family ablation and the clean leave-toxic-out control
-python src/up_train_userlevel.py
+python src/up_train_userlevel.py --kfolds 5 --models logreg,linsvc,histgb,xgb,lgbm,mlp,svc
 python src/up_lto_control.py
 
 # 5) Transformer: end-to-end DistilBERT on concatenated user review text
@@ -207,7 +264,7 @@ All numbers below preserve the real platform prevalence unless stated otherwise.
 | Qwen-2.5-7B, classifier | 0.268 | 0.888 | 0.614 | 0.305 |
 | Rate label (MPNet + linear SVM) | 0.486 | 0.841 | 0.700 | 0.483 |
 
-Source: [results/replication/master_table.csv](results/replication/master_table.csv) and [results/lente4_llm/llm_user_metrics.csv](results/lente4_llm/llm_user_metrics.csv).
+Sources: [classical fold metrics](results/replication/metrics_cv.csv), [DistilBERT fold metrics](results/replication_bert_undersampled/bert_user_metrics.csv), and [LLM block metrics](results/lente4_llm/llm_user_metrics.csv). See [results provenance](docs/results.md) before using retrospective threshold-dependent values from `master_table.csv`.
 
 ### Leave-toxic-out control
 
@@ -230,7 +287,7 @@ Paired tests over the exact users shared by the compared models, with Holm famil
 | DistilBERT balanced vs. real prevalence | F1-macro | +0.118 [+0.115, +0.122] |
 | Claude Opus vs. GPT-4o narratives | judge overall | +0.306 [+0.125, +0.500] |
 
-Source: [results/replication/pairwise_bootstrap.csv](results/replication/pairwise_bootstrap.csv).
+These four confirmatory comparisons are transcribed from the accepted paper. The supplied `pairwise_bootstrap.csv` contains different, within-model feature comparisons; the original confirmatory analysis and its aggregate export remain to be recovered. See [the evidence gap](docs/results.md#statistical-tests).
 
 ## Limitations
 
@@ -238,17 +295,17 @@ The measurements rest on tool-derived labels. Toxicity is operationalized throug
 
 ## Citation
 
-The paper is under double-blind review, so author and venue details are withheld here. A citation entry will be added on acceptance.
+The paper has been accepted at AIIDE 2026. Page numbers and DOI will be added when the proceedings are published.
 
 ```bibtex
 @inproceedings{toxicsteam2026,
   title     = {Toxic Steam: A Large-Scale Characterization and Prediction of Toxic Users in a Gaming Platform},
-  author    = {Omitted for blind review},
-  booktitle = {Under review},
+  author    = {Gibrim, Paula T. M. and Lodi, Vinicius K. and Andrade, Gabriel S. and Ribeiro, Marcus V. G. and Gruppi, Maur{\'i}cio and Barbosa, Daniel M. and Melo, Philipe F. and Reis, Julio C. S.},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence and Interactive Digital Entertainment},
   year      = {2026}
 }
 ```
 
 ## License
 
-Released under the [MIT License](LICENSE). The code may be used, modified, and redistributed for academic and research purposes with appropriate citation.
+The code is released under the [MIT License](LICENSE). Preserve its copyright and permission notice when redistributing it. Please cite the paper when using this work in research. The software license does not grant rights to the excluded Steam corpus or third-party review text.

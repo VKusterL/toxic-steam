@@ -45,6 +45,7 @@ def per_game_counts(step02_dir: Path, lang: str) -> tuple:
         n_kept += len(df)
         if df.empty:
             continue
+        df = df.assign(game_id=cio.normalize_game_id(df["game_id"]))
         part = df.groupby("game_id", dropna=True)["is_toxic"].agg(["size", "sum"])
         part.columns = ["n_reviews", "n_toxic"]
         totals = part if totals is None else totals.add(part, fill_value=0)
@@ -111,10 +112,16 @@ def apply_volume_threshold(table: pd.DataFrame, quantile: float = VOLUME_QUANTIL
     return kept, float(threshold)
 
 
-def _comma_millions(value, _pos) -> str:
-    """0,0 / 1,0 / ... - the published figure uses a decimal comma on this
-    axis. Matched deliberately; see plotting.py's module docstring."""
-    return f"{value:.1f}".replace(".", ",")
+def _millions(value, _pos) -> str:
+    """0.0 / 1.0 / ... - one decimal, and a decimal point.
+
+    The originally published figure carried a decimal comma here, inherited
+    from the authoring locale, while the toxicity axis above it and every
+    number in the running text use a point. Two separators on one figure is
+    a typo the camera-ready should not keep, so the axis now matches the
+    rest of the paper.
+    """
+    return f"{value:.1f}"
 
 
 def plot_top_tags(top: pd.DataFrame, output_path: Path) -> Path:
@@ -128,6 +135,7 @@ def plot_top_tags(top: pd.DataFrame, output_path: Path) -> Path:
     trustworthy, and the line carries the rate itself.
     """
     plotting.apply_style(plotting.BAR_FONTSIZE)
+    plotting.assert_compliant([plotting.BAR_FONTSIZE], "top-10-tags-tox")
     import matplotlib.pyplot as plt
     from matplotlib.ticker import FuncFormatter
 
@@ -138,32 +146,44 @@ def plot_top_tags(top: pd.DataFrame, output_path: Path) -> Path:
     non_toxic_m = (ordered["n_reviews"] - ordered["n_toxic"]) / 1e6
     toxic_m = ordered["n_toxic"] / 1e6
 
-    fig, ax = plt.subplots(figsize=plotting.BAR_FIGSIZE)
+    fig, ax = plt.subplots(figsize=plotting.BAR_FIGSIZE, layout="constrained")
     ax.barh(positions, non_toxic_m, color=plotting.NONTOXIC_COLOR, label="Non-toxic", zorder=2)
-    ax.barh(positions, toxic_m, left=non_toxic_m, color=plotting.TOXIC_COLOR, label="Toxic", zorder=2)
+    # The hatch is what keeps the toxic slice visible in a grayscale print,
+    # where its red and the non-toxic green differ by only 8% of luminance -
+    # see plotting.py. In color it reads as the same bar it always was.
+    ax.barh(
+        positions, toxic_m, left=non_toxic_m, color=plotting.TOXIC_COLOR,
+        label="Toxic", zorder=2, hatch=plotting.TOXIC_HATCH,
+        edgecolor="white", linewidth=0.4,
+    )
 
     ax.set_yticks(positions)
     ax.set_yticklabels(ordered["tag"])
+    ax.set_ylim(-0.7, len(ordered) - 0.5)  # room for the legend under the bars
     ax.set_xlabel("Number of reviews (Millions)")
-    ax.xaxis.set_major_formatter(FuncFormatter(_comma_millions))
+    ax.xaxis.set_major_formatter(FuncFormatter(_millions))
     ax.grid(axis="x", linestyle="--", linewidth=plotting.GRID_LINEWIDTH, zorder=0)
     ax.set_axisbelow(True)
 
     rate_ax = ax.twiny()
     rate_ax.plot(
         ordered["toxicity_pct"], positions,
-        color=plotting.RATE_LINE_COLOR, marker="o", markersize=8,
+        color=plotting.RATE_LINE_COLOR, marker="o", markersize=2.6,
         linewidth=plotting.RATE_LINEWIDTH, label="% Toxicity", zorder=3,
     )
     rate_ax.set_xlabel("Toxic reviews (%)")
+    rate_ax.set_ylim(ax.get_ylim())
     rate_ax.grid(visible=False)
 
     # One legend for both axes - the bars live on `ax`, the line on `rate_ax`.
     handles = ax.get_legend_handles_labels()[0] + rate_ax.get_legend_handles_labels()[0]
     labels = ax.get_legend_handles_labels()[1] + rate_ax.get_legend_handles_labels()[1]
-    ax.legend(handles, labels, loc="lower right", fontsize=plotting.BAR_LEGEND_FONTSIZE)
+    ax.legend(
+        handles, labels, loc="lower right", fontsize=plotting.BAR_FONTSIZE,
+        handlelength=1.4, borderpad=0.35, labelspacing=0.3, borderaxespad=0.3,
+    )
 
-    saved = plotting.save_figure(fig, output_path)
+    saved = plotting.save_figure(fig, output_path, expected_width=plotting.BAR_FIGSIZE[0])
     info(f"Wrote figure: {saved}")
     return saved
 

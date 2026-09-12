@@ -1,0 +1,137 @@
+{
+  "language": "en",
+  "source": "..\\..\\data\\corpus\\reviews_w_detoxify",
+  "lexicon_path": null,
+  "corpus_fit": {
+    "n_documents": 36823127,
+    "vocabulary_size": 64969,
+    "idf_min": 2.6716626696721804,
+    "idf_max": 13.806516167149015,
+    "terms": {
+      "sucks": {
+        "index": 55250,
+        "idf": 6.083654585468817
+      },
+      "ass": {
+        "index": 3193,
+        "idf": 6.142532002060575
+      },
+      "trash": {
+        "index": 58705,
+        "idf": 6.30037601771729
+      },
+      "kill": {
+        "index": 31211,
+        "idf": 5.189380875586981
+      },
+      "suck": {
+        "index": 55240,
+        "idf": 6.6324743942530064
+      },
+      "stupid": {
+        "index": 54980,
+        "idf": 6.0726852194650744
+      },
+      "garbage": {
+        "index": 23025,
+        "idf": 6.415375658588712
+      },
+      "balls": {
+        "index": 4396,
+        "idf": 7.2950503993297335
+      },
+      "like": {
+        "index": 32677,
+        "idf": 2.8361546335968493
+      },
+      "good": {
+        "index": 24068,
+        "idf": 2.6716626696721804
+      },
+      "people": {
+        "index": 41543,
+        "idf": 4.138493430222978
+      },
+      "fun": {
+        "index": 22283,
+        "idf": 2.8267977705834286
+      }
+    }
+  },
+  "tags": [
+    "Team-Based",
+    "Competitive",
+    "PvP",
+    "FPS",
+    "Shooter",
+    "Military",
+    "Free to Play",
+    "Gore",
+    "Violent",
+    "Comedy"
+  ],
+  "terms": [
+    "sucks",
+    "ass",
+    "kill",
+    "trash",
+    "stupid",
+    "suck",
+    "garbage",
+    "balls",
+    "people",
+    "like",
+    "good",
+    "fun"
+  ],
+  "toxic_reviews_per_tag": {
+    "Team-Based": 140172,
+    "Competitive": 129780,
+    "PvP": 196634,
+    "FPS": 242991,
+    "Shooter": 281229,
+    "Military": 113868,
+    "Free to Play": 141179,
+    "Gore": 151793,
+    "Violent": 132902,
+    "Comedy": 105836
+  },
+  "paper_claims": [
+    {
+      "text": "In competitive environments (Team-Based, Competitive, PvP), the dominant terms are sucks, ass and trash",
+      "kind": "top_terms",
+      "tags": [
+        "Team-Based",
+        "Competitive",
+        "PvP"
+      ],
+      "terms": "{'ass', 'trash', 'sucks'}",
+      "status": "holds",
+      "detail": "Team-Based: sucks, ass, trash; Competitive: sucks, ass, trash; PvP: sucks, ass, trash"
+    },
+    {
+      "text": "In Gore and Violent, kill surpasses sucks as the most salient term",
+      "kind": "greater",
+      "tags": [
+        "Gore",
+        "Violent"
+      ],
+      "higher": "kill",
+      "lower": "sucks",
+      "status": "holds",
+      "detail": "Gore: kill 0.070 vs sucks 0.043; Violent: kill 0.068 vs sucks 0.043"
+    },
+    {
+      "text": "The same pattern (kill over sucks) is observed in Comedy",
+      "kind": "greater",
+      "tags": [
+        "Comedy"
+      ],
+      "higher": "kill",
+      "lower": "sucks",
+      "status": "holds",
+      "detail": "Comedy: kill 0.057 vs sucks 0.044"
+    }
+  ],
+  "figure_path": "D:\\toxic-steam\\toxic-steam\\data\\figures-output\\heatmap_tfidf_tags.pdf"
+}

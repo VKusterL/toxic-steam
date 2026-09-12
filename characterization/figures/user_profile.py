@@ -130,13 +130,22 @@ def attach_profiles(users: pd.DataFrame, users_path: Path) -> tuple:
     """Left-joins step01's profile table on the SteamID64 extracted from
     the review URL. Users that do not match keep NaN for the profile
     columns; `matched` marks the ones that did, so the per-panel
-    populations stay explicit rather than implicit in a dropna()."""
+    populations stay explicit rather than implicit in a dropna().
+
+    `matched` comes from an explicit indicator carried by the profile
+    table, NOT from whether the joined fields are non-null. A collected
+    profile can legitimately have a null level or library size - that is
+    what a private profile looks like - so reading the payload would score
+    those as unmatched and shrink the matched population from 6.20M to
+    5.07M, dragging the ban-rate denominator with it.
+    """
     profiles = cio.load_user_profiles(users_path)
+    profiles = profiles.assign(_profile_found=True)
     users = users.copy()
     users["steam_id"] = cio.extract_steam_id(users["user_url"])
 
     merged = users.merge(profiles, on="steam_id", how="left")
-    merged["matched"] = merged["profile_level"].notna() | merged["library_size"].notna()
+    merged["matched"] = merged.pop("_profile_found").fillna(False).astype(bool)
 
     n_with_id = int(users["steam_id"].notna().sum())
     n_matched = int(merged["matched"].sum())
@@ -169,19 +178,26 @@ def empirical_cdf(values: np.ndarray, max_points: int = PLOT_POINTS) -> tuple:
 def plot_panel(users: pd.DataFrame, panel: dict, output_path: Path) -> tuple:
     """One CDF panel: both groups, with a dashed vertical line at each
     group's median."""
+    # has_mathtext: the log axis prints 10^n, and the exponent is the
+    # smallest type in the figure.
     plotting.apply_style(plotting.CDF_FONTSIZE)
+    plotting.assert_compliant(
+        [plotting.CDF_FONTSIZE], output_path.name, has_mathtext=True
+    )
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
 
-    fig, ax = plt.subplots(figsize=plotting.CDF_FIGSIZE)
+    fig, ax = plt.subplots(figsize=plotting.CDF_FIGSIZE, layout="constrained")
     medians = {}
 
     # `key` is the report/JSON name and `label` the one drawn in the legend;
     # they are kept separate so the key stays a plain identifier, matching
     # ban_rates' `toxic`/`non_toxic` naming.
-    for toxic, key, color, label in (
-        (False, "non_toxic", plotting.NONTOXIC_COLOR, "Non-toxic users"),
-        (True, "toxic", plotting.TOXIC_COLOR, "Toxic users"),
+    for toxic, key, color, style, label in (
+        (False, "non_toxic", plotting.NONTOXIC_COLOR,
+         plotting.NONTOXIC_LINESTYLE, "Non-toxic users"),
+        (True, "toxic", plotting.TOXIC_COLOR,
+         plotting.TOXIC_LINESTYLE, "Toxic users"),
     ):
         values = _series_for(users, panel, toxic).to_numpy(dtype="float64")
         if len(values) == 0:
@@ -197,15 +213,23 @@ def plot_panel(users: pd.DataFrame, panel: dict, output_path: Path) -> tuple:
         if n_zero:
             medians[f"{key}_zeros_not_drawn"] = n_zero
 
+        # Dash pattern, not just hue: printed in grayscale the two curves
+        # are the same grey - see plotting.py. The median rule is dotted so
+        # it stays distinct from the dashed non-toxic curve.
         x, y = empirical_cdf(values)
-        ax.plot(x, y, color=color, linewidth=plotting.CDF_LINEWIDTH, label=label, zorder=3)
+        ax.plot(x, y, color=color, linestyle=style,
+                linewidth=plotting.CDF_LINEWIDTH, label=label, zorder=3)
         ax.axvline(
-            median, color=color, linestyle="--",
+            median, color=color, linestyle=plotting.MEDIAN_LINESTYLE,
             linewidth=plotting.CDF_LINEWIDTH, zorder=2,
         )
 
     ax.set_xlabel(panel["xlabel"])
     ax.set_ylabel("CDF")
+    # Explicit y ticks: at this panel size matplotlib's automatic locator
+    # thins them to 0/0.5/1.0, which reads as a coarser curve than the
+    # published panels. Six labels still fit comfortably at 10pt.
+    ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     ax.set_xscale("log")
     ax.grid(alpha=0.3)
     ax.set_axisbelow(True)
@@ -216,7 +240,9 @@ def plot_panel(users: pd.DataFrame, panel: dict, output_path: Path) -> tuple:
     ax.xaxis.set_major_locator(ticker.LogLocator(base=10))
     ax.xaxis.set_minor_formatter(ticker.NullFormatter())
 
-    saved = plotting.save_figure(fig, output_path)
+    saved = plotting.save_figure(
+        fig, output_path, expected_width=plotting.CDF_FIGSIZE[0]
+    )
     info(f"Wrote figure: {saved}  medians={medians}")
     return saved, medians
 
@@ -227,39 +253,59 @@ def plot_legend(output_path: Path) -> Path:
 
     Two entries only, matching the published legend: the median rules are
     drawn in each group's own color, so they need no separate key."""
-    plotting.apply_style(plotting.LEGEND_FONTSIZE)
+    plotting.apply_style(plotting.CDF_FONTSIZE)
+    plotting.assert_compliant([plotting.CDF_FONTSIZE], "cdf-legend")
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
 
     handles = [
         Line2D([], [], color=plotting.NONTOXIC_COLOR,
+               linestyle=plotting.NONTOXIC_LINESTYLE,
                linewidth=plotting.CDF_LINEWIDTH, label="Non-toxic users"),
         Line2D([], [], color=plotting.TOXIC_COLOR,
+               linestyle=plotting.TOXIC_LINESTYLE,
                linewidth=plotting.CDF_LINEWIDTH, label="Toxic users"),
     ]
-    fig = plt.figure(figsize=plotting.LEGEND_FIGSIZE)
-    fig.legend(handles=handles, loc="center", ncol=2, frameon=False)
-    saved = plotting.save_figure(fig, output_path)
+    fig = plt.figure(figsize=plotting.LEGEND_FIGSIZE, layout="constrained")
+    fig.legend(handles=handles, loc="center", ncol=2, frameon=False, handlelength=1.8)
+    saved = plotting.save_figure(
+        fig, output_path, expected_width=plotting.LEGEND_FIGSIZE[0]
+    )
     info(f"Wrote figure: {saved}")
     return saved
 
 
 def ban_rates(users: pd.DataFrame) -> dict:
-    """Share of each group with a public ban on record.
+    """Share of each group with a public ban on record, both ways.
 
-    Restricted to matched profiles, because `has_ban` is a profile field:
-    an unmatched user is not an unbanned user, and counting them as one
-    would push both rates toward zero by roughly the same unmatched share,
-    making the comparison look tighter than it is."""
-    matched = users[users["matched"]]
+    TWO DENOMINATORS, AND THE PAPER USES THE FIRST ONE. `ban_pct` divides
+    by every user in the group, so a user whose profile was never collected
+    counts as not banned. That is what the published 1.4% vs. 1.2% reports,
+    and it is the conservative reading: an unseen ban cannot inflate the
+    gap.
+
+    `ban_pct_matched` divides by the matched profiles only, where the flag
+    was actually observed. It is the higher figure (3.12% vs. 2.69% on the
+    English corpus) because roughly 44% of users match a profile at all.
+    Both are reported because the choice changes the number by more than
+    the gap between the two groups does, and a reader comparing this
+    artifact to the paper needs to see which one is which.
+
+    Neither denominator changes the finding: toxic users are banned
+    slightly more often, and nowhere near in proportion to how much more
+    they review.
+    """
     out = {}
     for toxic, label in ((True, "toxic"), (False, "non_toxic")):
-        group = matched[matched["is_toxic_user"] == toxic]
-        flags = group["has_ban"].astype("boolean")
-        known = flags.notna().sum()
-        banned = int(flags.fillna(False).sum())
+        group = users[users["is_toxic_user"] == toxic]
+        matched = group[group["matched"]]
+        banned = int(matched["has_ban"].astype("boolean").fillna(False).sum())
+
         out[f"{label}_n"] = int(len(group))
-        out[f"{label}_known"] = int(known)
+        out[f"{label}_matched"] = int(len(matched))
         out[f"{label}_banned"] = banned
-        out[f"{label}_ban_pct"] = 100 * banned / known if known else None
+        out[f"{label}_ban_pct"] = 100 * banned / len(group) if len(group) else None
+        out[f"{label}_ban_pct_matched"] = (
+            100 * banned / len(matched) if len(matched) else None
+        )
     return out

@@ -1,0 +1,132 @@
+{
+  "reviews": {
+    "paper": 36823127,
+    "recomputed": 36823127,
+    "decimals_compared": 0
+  },
+  "users": {
+    "paper": 14183630,
+    "recomputed": 14183630,
+    "decimals_compared": 0
+  },
+  "games_with_en_review": {
+    "paper": 67477,
+    "recomputed": 67477,
+    "decimals_compared": 0
+  },
+  "toxic_reviews": {
+    "paper": 685536,
+    "recomputed": 685536,
+    "decimals_compared": 0
+  },
+  "toxic_reviews_pct": {
+    "paper": 1.86,
+    "recomputed": 1.8616995780939516,
+    "decimals_compared": 2
+  },
+  "toxic_users": {
+    "paper": 560079,
+    "recomputed": 560079,
+    "decimals_compared": 0
+  },
+  "toxic_users_pct": {
+    "paper": 3.95,
+    "recomputed": 3.9487705192535336,
+    "decimals_compared": 2
+  },
+  "users_matched": {
+    "paper": 6204110,
+    "recomputed": 6204110,
+    "decimals_compared": 0
+  },
+  "users_matched_pct": {
+    "paper": 43.7,
+    "recomputed": 43.74134125044153,
+    "decimals_compared": 1
+  },
+  "pearson": {
+    "paper": 0.770234,
+    "recomputed": 0.7702339802326726,
+    "decimals_compared": 6
+  },
+  "spearman": {
+    "paper": 0.606591,
+    "recomputed": 0.6065906490214586,
+    "decimals_compared": 6
+  },
+  "toxic_recommended_pct": {
+    "paper": 57.5,
+    "recomputed": 57.520538673388415,
+    "decimals_compared": 1
+  },
+  "median_reviews_toxic": {
+    "paper": 3,
+    "recomputed": 3.0,
+    "decimals_compared": 0
+  },
+  "median_reviews_nontoxic": {
+    "paper": 1,
+    "recomputed": 1.0,
+    "decimals_compared": 0
+  },
+  "median_library_toxic": {
+    "paper": 102,
+    "recomputed": 102.0,
+    "decimals_compared": 0
+  },
+  "median_library_nontoxic": {
+    "paper": 74,
+    "recomputed": 74.0,
+    "decimals_compared": 0
+  },
+  "median_level_toxic": {
+    "paper": 12,
+    "recomputed": 12.0,
+    "decimals_compared": 0
+  },
+  "median_level_nontoxic": {
+    "paper": 10,
+    "recomputed": 10.0,
+    "decimals_compared": 0
+  },
+  "ban_pct_toxic": {
+    "paper": 1.4,
+    "recomputed": 1.3724849530155567,
+    "decimals_compared": 1
+  },
+  "ban_pct_nontoxic": {
+    "paper": 1.2,
+    "recomputed": 1.1764774103315647,
+    "decimals_compared": 1
+  },
+  "tag_team_based_pct": {
+    "paper": 2.93,
+    "recomputed": 2.929367044641646,
+    "decimals_compared": 2
+  },
+  "tag_competitive_pct": {
+    "paper": 2.9,
+    "recomputed": 2.9039143996384094,
+    "decimals_compared": 2
+  },
+  "tag_pvp_pct": {
+    "paper": 2.57,
+    "recomputed": 2.569792903448821,
+    "decimals_compared": 2
+  },
+  "tag_exploration_pct": {
+    "paper": 1.22,
+    "recomputed": 1.2233284095366177,
+    "decimals_compared": 2
+  },
+  "tag_puzzle_pct": {
+    "paper": 1.26,
+    "recomputed": 1.2585085645354737,
+    "decimals_compared": 2
+  },
+  "tag_cute_pct": {
+    "paper": 1.53,
+    "recomputed": 1.5321052562908608,
+    "decimals_compared": 2
+  }
+}

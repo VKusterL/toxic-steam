@@ -142,6 +142,94 @@ def tag_term_means(
     return means, counts
 
 
+# The claims the paper's text makes about this figure. Unlike the counts and
+# rates elsewhere in the characterization, a TF-IDF cell is not a number the
+# text quotes - it states an ORDERING, and an ordering is what can be checked.
+# Keeping the checks next to the figure means a regeneration that would
+# falsify a sentence says so, instead of the sentence quietly going stale.
+PAPER_CLAIMS = [
+    {
+        "text": "In competitive environments (Team-Based, Competitive, PvP), "
+                "the dominant terms are sucks, ass and trash",
+        "kind": "top_terms",
+        "tags": ["Team-Based", "Competitive", "PvP"],
+        "terms": {"sucks", "ass", "trash"},
+    },
+    {
+        "text": "In Gore and Violent, kill surpasses sucks as the most salient term",
+        "kind": "greater",
+        "tags": ["Gore", "Violent"],
+        "higher": "kill",
+        "lower": "sucks",
+    },
+    {
+        "text": "The same pattern (kill over sucks) is observed in Comedy",
+        "kind": "greater",
+        "tags": ["Comedy"],
+        "higher": "kill",
+        "lower": "sucks",
+    },
+]
+
+
+def check_paper_claims(means: pd.DataFrame) -> list:
+    """Checks each claim the text makes about this figure against the matrix
+    just computed.
+
+    A claim whose tags or terms are not in this run is reported as skipped,
+    not as passing: the script is parameterizable, and a run over a
+    different tag set says nothing about a sentence describing the
+    published one.
+    """
+    results = []
+    for claim in PAPER_CLAIMS:
+        tags = [t for t in claim["tags"] if t in means.columns]
+        if not tags:
+            results.append({**claim, "status": "skipped",
+                            "detail": "none of its tags are in this run"})
+            continue
+
+        if claim["kind"] == "top_terms":
+            needed = claim["terms"]
+            if not needed <= set(means.index):
+                results.append({**claim, "status": "skipped",
+                                "detail": "not all of its terms are plotted"})
+                continue
+            per_tag = {t: set(means[t].nlargest(len(needed)).index) for t in tags}
+            ok = all(v == needed for v in per_tag.values())
+            detail = "; ".join(f"{t}: {', '.join(means[t].nlargest(len(needed)).index)}"
+                               for t in tags)
+        else:
+            high, low = claim["higher"], claim["lower"]
+            if high not in means.index or low not in means.index:
+                results.append({**claim, "status": "skipped",
+                                "detail": "its terms are not plotted"})
+                continue
+            ok = all(means.loc[high, t] > means.loc[low, t] for t in tags)
+            detail = "; ".join(
+                f"{t}: {high} {means.loc[high, t]:.3f} vs {low} {means.loc[low, t]:.3f}"
+                for t in tags
+            )
+
+        results.append({**claim, "status": "holds" if ok else "CONTRADICTED",
+                        "detail": detail})
+    return results
+
+
+def report_claims(results: list) -> bool:
+    """Prints the claim check and returns whether anything was contradicted."""
+    info("Claims the paper makes about this figure:")
+    contradicted = False
+    for r in results:
+        info(f"  [{r['status']}] {r['text']}")
+        info(f"      {r['detail']}")
+        contradicted |= r["status"] == "CONTRADICTED"
+    if contradicted:
+        info("  WARNING: the regenerated figure contradicts the text above. "
+             "Either the text needs updating or the inputs changed.")
+    return contradicted
+
+
 def _draw_cluster_bands(ax, columns: list) -> int:
     """Shades each run of adjacent columns belonging to the same tag family.
     Returns how many bands were drawn, so a run over a tag set the map does
@@ -172,11 +260,14 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
     light end of the grid is hard to read off the color alone - which is
     why every cell is annotated rather than left to the colorbar.
     """
-    plotting.apply_style(plotting.HEATMAP_FONTSIZE)
+    plotting.apply_style(plotting.BODY_FONTSIZE)
+    plotting.assert_compliant(
+        [plotting.BODY_FONTSIZE, plotting.SMALL_FONTSIZE], "heatmap_tfidf_tags"
+    )
     import matplotlib.pyplot as plt
 
     data = means.to_numpy(dtype="float64")
-    fig, ax = plt.subplots(figsize=plotting.HEATMAP_FIGSIZE)
+    fig, ax = plt.subplots(figsize=plotting.HEATMAP_FIGSIZE, layout="constrained")
 
     n_bands = _draw_cluster_bands(ax, list(means.columns))
     if n_bands == 0:
@@ -188,7 +279,7 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
     ax.set_xticklabels(means.columns, rotation=45, ha="right", rotation_mode="anchor")
     ax.set_yticks([i + 0.5 for i in range(len(means.index))])
     ax.set_yticklabels(means.index)
-    ax.set_ylabel("Term", fontsize=plotting.HEATMAP_LABEL_FONTSIZE)
+    ax.set_ylabel("Term", fontsize=plotting.BODY_FONTSIZE)
     # No invert_yaxis: pcolormesh puts row 0 at the bottom, and `means` is
     # ordered strongest-first, so the most salient term lands on the bottom
     # row - the published orientation, weakest at the top.
@@ -209,14 +300,16 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
                 col + 0.5, row + 0.5, f"{value:.3f}",
                 ha="center", va="center",
                 color="white" if value > switch else "black",
-                fontsize=plotting.HEATMAP_FONTSIZE,
+                fontsize=plotting.SMALL_FONTSIZE,
             )
 
-    colorbar = fig.colorbar(image, ax=ax)
-    colorbar.set_label("Mean TF-IDF Score", fontsize=plotting.HEATMAP_CBAR_FONTSIZE)
-    colorbar.ax.tick_params(labelsize=plotting.HEATMAP_CBAR_FONTSIZE)
+    colorbar = fig.colorbar(image, ax=ax, fraction=0.025, pad=0.015)
+    colorbar.set_label("Mean TF-IDF Score", fontsize=plotting.SMALL_FONTSIZE)
+    colorbar.ax.tick_params(labelsize=plotting.SMALL_FONTSIZE)
 
-    saved = plotting.save_figure(fig, output_path)
+    saved = plotting.save_figure(
+        fig, output_path, expected_width=plotting.HEATMAP_FIGSIZE[0]
+    )
     info(f"Wrote figure: {saved}")
     return saved
 

@@ -1,12 +1,12 @@
 # Results
 
-All results preserve the real platform prevalence unless a table says otherwise. Cross-validation is five-fold for the classical models and ten-fold for DistilBERT, with folds shared across models so that comparisons are paired. Thresholds are tuned inside the training portion of each fold and applied unchanged to the evaluated partition. AUC-PR is the anchor metric because the task is rare-positive ranking under about 4 percent prevalence.
+The paper's headline results preserve the real platform prevalence unless a table says otherwise. Cross-validation is five-fold for the classical models and ten-fold for the canonical DistilBERT run, with folds shared within the classical benchmark. In the original classical runs, thresholds are tuned on training scores; canonical DistilBERT uses an internal validation split. AUC-PR is the anchor metric because the task is rare-positive ranking under about 4 percent prevalence.
 
-The machine-readable versions of every table below are in `results/`.
+The tables below retain the accepted manuscript's values. The supplied `results/` contain supporting summaries, but not a machine-readable reproduction of every paper table. The source distinctions and missing confirmatory-test export are identified below; see [artifact.md](artifact.md) for what can be checked in the public package.
 
 ## User-level prediction, count label
 
-Reported as mean plus or minus standard deviation across folds. `F1+`, `Prec.+`, and `Rec.+` refer to the toxic-user class.
+The table shows rounded means; fold/block dispersions are in the source files. `F1+`, `Prec.+`, and `Rec.+` refer to the toxic-user class.
 
 | Model family | Label | AUC-PR | ROC-AUC | F1-macro | F1+ | Prec.+ | Rec.+ |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -20,7 +20,7 @@ Reported as mean plus or minus standard deviation across folds. `F1+`, `Prec.+`,
 | Qwen-2.5-7B, classifier | count | 0.268 | 0.888 | 0.614 | 0.305 | 0.192 | 0.750 |
 | Rate label (MPNet + linear SVM) | rate | 0.486 | 0.841 | 0.700 | 0.483 | 0.452 | 0.519 |
 
-Files: `results/replication/master_table.csv`, `results/replication/metrics_agg.csv`, `results/lente4_llm/llm_user_metrics.csv`, `results/replication_bert_undersampled/bert_user_metrics.csv`.
+Sources: classical results in `results/replication/metrics_cv.csv` and `metrics_agg.csv`; the MPNet rate-label result in `results/replication_mpnet/`; LLM results in `results/lente4_llm/llm_user_metrics.csv`; canonical DistilBERT in `results/replication_bert_undersampled/bert_user_metrics.csv`. `master_table.csv` also contains retrospective classical F1, precision, and recall obtained by retuning thresholds on evaluated OOF folds. Those values differ from the original training-threshold metrics above and should not be substituted for them. Ranking metrics do not depend on the threshold.
 
 Profile metadata alone is a weak signal (AUC-PR 0.070), and adding public ban indicators does not change it, which suggests visible enforcement is not tightly coupled with review-level toxicity. Text-derived representations improve prediction sharply. Replacing MiniLM with MPNet leaves the content result essentially unchanged (AUC-PR 0.479), so the finding is not specific to one encoder. DistilBERT gives the strongest ranking among supervised runs; a parallel MPNet-base fine-tuning reaches a comparable AUC-PR of 0.639, indicating the gain comes from reading review text end to end rather than from a specific backbone.
 
@@ -51,7 +51,7 @@ This is the central diagnostic. Even after every toxic review is removed before 
 | Llama-3.1-8B | 0.643 | 0.782 | 0.308 | 0.794 |
 | Qwen-2.5-7B | 0.614 | 0.807 | 0.268 | 0.852 |
 
-File: `results/replication/balanced_eval.csv`.
+Source distinction: the LLM rows use fixed binary decisions as summarized in `results/replication/master_table.csv`; the classical real-prevalence values come from the original fold metrics. `results/replication/balanced_eval.csv` is a separate exploratory export that pools predictions and retunes thresholds on evaluated labels. Its F1 values, and its pooled DistilBERT AUC-PR, do not directly reproduce this table. The paper's fold-level balanced DistilBERT summary is not supplied as a separate aggregate file.
 
 Balancing the evaluation set inflates apparent performance considerably. It is useful for comparison with case-control and balanced protocols common in prior work, but it should not be read as deployment performance on the real Steam population, for which the real-prevalence setting stays primary.
 
@@ -66,7 +66,7 @@ Non-parametric paired tests over the exact users shared by the compared models, 
 | DistilBERT balanced vs. real prevalence | F1-macro | 10 | +0.118 [+0.115, +0.122] | 0.004 |
 | Claude Opus vs. GPT-4o narratives | judge overall | 24 | +0.306 [+0.125, +0.500] | 0.004 |
 
-File: `results/replication/pairwise_bootstrap.csv`.
+Artifact coverage: these four confirmatory tests are transcribed from the paper. `results/replication/pairwise_bootstrap.csv` instead contains within-model classical feature-arm comparisons; it has no cross-family rows or Holm-adjusted p-values. The supplied `src/up_significance.py` generates that narrower comparison. The code and aggregate output for the four confirmatory tests above need to be recovered from the study analysis before this table can be described as reproducible from the artifact. The accepted numerical values have not been recalculated or replaced here.
 
 The paired deltas cannot be reproduced by subtracting rows of the main table. The DistilBERT comparison uses the 60,000 users shared with the fine-tuning run and pooled out-of-fold scores, whose pooled AUC-PR of 0.583 is lower than the per-fold mean of 0.643 because each fold trains a separate network on a different scale, so the reported delta is conservative.
 
@@ -76,4 +76,4 @@ As direct classifiers, Claude Opus leads the LLMs under real prevalence (AUC-PR 
 
 The narrative panel is where LLMs add the most value. Across 96 narratives, mean overall judge scores from non-self judgments are Claude Opus 3.718, GPT-4o 3.417, Qwen 3.099, and Llama 3.056. Opus also leads on faithfulness and clarity. Inter-judge agreement is weak and uneven, with pairwise Spearman correlations on the overall score ranging from 0.49 down to -0.27, so LLM-based evaluation is treated as diagnostic rather than as ground truth.
 
-Files: `results/lente4_llm/panel/judgments.csv`, `results/lente4_llm/panel/narratives.jsonl`.
+Research-checkout sources: `results/lente4_llm/panel/judgments.csv` and `results/lente4_llm/panel/narratives.jsonl`. These contain user-level records and are excluded from the public export; quotations and raw identifiers are not needed to inspect the aggregate values reported here.

@@ -6,7 +6,7 @@ User-level toxicity prediction is framed here as a prevalence-aware benchmark fo
 
 ## Data and consent
 
-The data describe real users who did not consent to toxicity profiling. Identifiable raw data is therefore not redistributed, aggregate results contain no recoverable individual, and any re-collection should pseudonymize Steam identifiers and profile URLs and respect Steam's Terms of Service. The content warning in the README applies throughout: illustrative quotes contain offensive and hateful language.
+The data describe real users who did not consent to toxicity profiling. The publication export therefore excludes the raw corpus and identifiable per-user research outputs, including prediction files keyed by Steam identifiers and narrative records quoting review text. Those outputs remain in the research checkout and its existing history; they must not be mistaken for anonymous aggregates. See [artifact.md](artifact.md) for the public package and [data.md](data.md) for availability. Any re-collection should pseudonymize Steam identifiers and profile URLs and respect Steam's Terms of Service. The content warning in the README applies throughout: illustrative quotes contain offensive and hateful language.
 
 ## Limitations that bear on use
 

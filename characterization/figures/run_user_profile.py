@@ -19,6 +19,7 @@ review down to one row per user before anything is plotted. Use
 tuning a figure should not mean re-reading 36.8M reviews.
 """
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -43,11 +44,23 @@ def parse_args():
 
 
 def load_or_build_counts(args) -> tuple:
-    if args.user_counts and args.user_counts.exists():
+    """Per-user counts, from the cache when one exists.
+
+    The review-level statistics travel with the cache in a sidecar JSON.
+    They are computed during the corpus pass but are not recoverable from
+    the per-user table afterwards - the share of toxic reviews that still
+    recommend the game is a property of reviews, not of users - so without
+    the sidecar a cached run would quietly report fewer numbers than a cold
+    one, which is exactly the kind of difference an artifact reviewer would
+    hit and not be able to explain.
+    """
+    sidecar = args.user_counts.with_suffix(".stats.json") if args.user_counts else None
+
+    if args.user_counts and args.user_counts.exists() and sidecar.exists():
         info(f"Reusing cached per-user counts from {args.user_counts}")
         users = pd.read_parquet(args.user_counts)
-        stats = {"user_counts_cached": True, "users_total": len(users),
-                 "users_toxic": int(users["is_toxic_user"].sum())}
+        stats = json.loads(sidecar.read_text(encoding="utf-8"))
+        stats["user_counts_cached"] = True
         return users, stats
 
     users, stats = up.per_user_counts(args.step02_dir, args.lang)
@@ -55,7 +68,8 @@ def load_or_build_counts(args) -> tuple:
     if args.user_counts:
         args.user_counts.parent.mkdir(parents=True, exist_ok=True)
         users.to_parquet(args.user_counts, index=False)
-        info(f"Cached per-user counts to {args.user_counts}")
+        sidecar.write_text(json.dumps(stats, indent=2), encoding="utf-8")
+        info(f"Cached per-user counts to {args.user_counts} (+ {sidecar.name})")
     return users, stats
 
 
@@ -78,10 +92,18 @@ def main():
     info("Group medians:")
     for name, values in medians.items():
         info(f"  {name}: toxic={values.get('toxic')} non-toxic={values.get('non_toxic')}")
-    info(
-        f"Ban rate: toxic {bans['toxic_ban_pct']:.2f}% vs non-toxic {bans['non_toxic_ban_pct']:.2f}%"
-        if bans.get("toxic_ban_pct") is not None else "Ban rate: not computable (no matched profiles)"
-    )
+    if bans.get("toxic_ban_pct") is not None:
+        info(
+            f"Ban rate (all users, the paper's denominator): "
+            f"toxic {bans['toxic_ban_pct']:.2f}% vs non-toxic {bans['non_toxic_ban_pct']:.2f}%"
+        )
+        info(
+            f"Ban rate (matched profiles only): "
+            f"toxic {bans['toxic_ban_pct_matched']:.2f}% vs "
+            f"non-toxic {bans['non_toxic_ban_pct_matched']:.2f}%"
+        )
+    else:
+        info("Ban rate: not computable (no matched profiles)")
     if stats.get("toxic_reviews_recommended_pct") is not None:
         info(
             f"{stats['toxic_reviews_recommended_pct']:.1f}% of toxic reviews still recommend the game"
@@ -98,7 +120,9 @@ def main():
             "note": (
                 "reviews_per_user is computed over every user in the corpus; library_size and "
                 "profile_level only over users matched to a collected public profile. Ban rates "
-                "are restricted to matched profiles for the same reason."
+                "are given both ways: *_ban_pct divides by every user in the group, which is the "
+                "paper's 1.4% vs 1.2%, and *_ban_pct_matched divides by the matched profiles "
+                "where the flag was actually observed."
             ),
         },
         args.output_dir / "user_profile_report.json",

@@ -21,6 +21,7 @@ repository, not here.
 | `step03_tfidf_analysis/` | Table 2 — the TF-IDF term weights for the regular and toxic trends, and the discriminative ratios quoted in the text. |
 | `annotation_agreement/` | Table 1 — inter-annotator agreement per toxicity bin, per model. Three human annotators, 200 reviews per model. This is what calibrated the thresholds step02 applies. |
 | `review_examples/` | The reviews quoted verbatim in the text, with their game names. |
+| `verify_numbers.py` | Recomputes every number the characterization section states and checks it against the published value. One command, 26 checks. |
 | `figures/` | The three figures of the characterization section - top-10 tags by toxicity rate, the per-tag TF-IDF heatmap, and the toxic-vs-non-toxic engagement CDFs - plus the behavioral statistics quoted with them (group medians, ban rates, and the 57.5% of toxic reviews that still recommend the game). |
 
 The three numbered steps run in order, and each reads the previous one's
@@ -108,18 +109,56 @@ pip install -r review_examples/requirements.txt
 pip install -r figures/requirements.txt   # matplotlib
 ```
 
+## Checking the paper against the corpus
+
+Every number the characterization section states is recomputed and compared
+by one script, so a reviewer does not have to take the prose on trust:
+
+```bash
+python characterization/verify_numbers.py --data data \
+    --output results/characterization/corpus_verification.json
+```
+
+It prints the published value beside the recomputed one for each of 26
+claims - corpus and label counts, both correlation coefficients, the
+per-tag rates, the engagement medians, the ban rates, the recommendation
+share - and exits non-zero if any of them disagrees. Each comparison is
+made at the precision the paper states the value at, so a figure the paper
+rounds to `1.86%` passes when the recomputation rounds to `1.86%`, while
+the two correlations, stated to six decimals, must match to six.
+
+The committed `results/characterization/corpus_verification.json` is that
+script's output on the corpus behind the paper: all 26 reproduce.
+
+Two of those checks encode a definition that is easy to get wrong, and both
+are spelled out where they are computed:
+
+- **Matched users** are those whose review URL carries a SteamID64 *present
+  in the collected profile table*. Deciding it from whether the joined
+  profile fields are non-null instead scores private profiles as unmatched
+  and gives 5.07M rather than 6.20M.
+- **Ban rates** divide by every user in the group, not by the matched
+  subset. That is the paper's 1.4% vs. 1.2%; over matched profiles only the
+  same counts read 3.12% vs. 2.69%. `run_user_profile.py` reports both.
+
 ## Numbers quoted in these READMEs
 
 The step-level READMEs record measurements from the runs that produced
 them - correlation coefficients, per-language row counts, agreement
-percentages, timings. **The paper is authoritative for every published
-result.** The corpus behind this folder went through later modifications,
-so a figure noted here can differ slightly from the corresponding value in
-the paper; where the two disagree, the paper's is the reported one.
+percentages, timings. Some of those runs were made on an intermediate state
+of the corpus rather than the one the paper reports, so a number noted in a
+step README can differ from the published one. The clearest case is
+`step02_run_detoxify/README.md`, which records a Pearson of 0.774 and a
+Spearman of 0.716 for English; the corpus behind the paper gives 0.770234
+and 0.606591, which is what the paper states and what
+`verify_numbers.py` reproduces.
 
-These notes are kept rather than trimmed because they document *why* a
-given decision was made - which is what a reviewer re-running the pipeline
-needs - not because they restate the paper's tables.
+**Where a step README and the paper disagree, the paper is right**, and the
+check above is the arbiter: it runs against `data/` and reports each claim
+individually. The step-level measurements are kept rather than trimmed
+because they document *why* a given decision was made - which is what a
+reviewer re-running the pipeline needs - not because they restate the
+paper's tables.
 
 ## Data availability
 

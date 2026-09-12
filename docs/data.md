@@ -2,9 +2,22 @@
 
 ## Availability
 
-The raw review, user, and game data are not distributed with this repository. They were collected from the public Steam Web API between September 2024 and April 2025, are subject to Steam's Terms of Service, and describe users who did not consent to toxicity profiling. Redistributing identifiable raw data is therefore avoided. The committed `results/` directory contains only aggregate numeric summaries, from which no individual user can be recovered. Exploratory tables and figures that summarize the raw corpus are not published.
+The raw review, user, and game corpus is not part of the publication artifact. It was collected from the public Steam Web API between September 2024 and April 2025 and describes users who did not consent to toxicity profiling. The public export includes aggregate numeric summaries, including the characterization tables under `results/characterization/`.
+
+The research checkout also contains tracked per-user prediction files with Steam identifiers, and narrative-panel records with review quotations. These are identifiable research outputs, not anonymous aggregates. They are excluded by the publication export; a direct archive or publication of the existing Git history does not provide that exclusion. See [artifact.md](artifact.md) for the release boundary.
 
 To re-run the pipeline from scratch, the collected corpus must be placed under `data/` in the parquet layout expected by `build_features.py`. Any re-collection should pseudonymize Steam identifiers and profile URLs.
+
+The prediction entry point discovers these inputs relative to the repository root:
+
+```text
+data/corpus/
+├── reviews_w_detoxify/       Scored review parquet files, with English paths marked en or lang=en
+├── users/all_users.parquet   Public profile table
+└── games/games.parquet       Game metadata and tags
+```
+
+Use `python src/build_features.py --root . --out data/features --langs en` from the repository root. The review files must already include both `toxicity` and `perspective_score`: the feature builder does not call either scoring service. The characterization scripts document the earlier cleaning and Detoxify stages. There is no bundled collector that can recreate the historical Steam snapshot from scratch, and the Perspective scores must be supplied in the input corpus.
 
 ## Collection and scope
 

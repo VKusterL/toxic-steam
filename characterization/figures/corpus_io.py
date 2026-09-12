@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+import pyarrow.parquet as pq
 
 from pipeline_utils import info, list_parquet_files
 
@@ -32,15 +33,25 @@ DETOXIFY_THRESHOLD = 0.9
 STEAMID_RE = re.compile(r"profiles/(\d+)")
 
 
+# The Detoxify score reaches disk under two names: `detoxify_score` in the
+# step02 scripts' own output, and `toxicity` in the archived corpus under
+# data/corpus/reviews_w_detoxify (which keeps Detoxify's original field
+# name). They are the same number; whichever is present is renamed to
+# `detoxify_score` on read so everything downstream sees one name.
+DETOXIFY_COLUMNS = ("detoxify_score", "toxicity")
+
+
 def resolve_lang_source(base_dir: Path, lang: str) -> Path:
-    """step02's output has been observed in two layouts across this
-    project's lifetime: subfolders (base_dir/review_lang=<lang>/*.parquet)
-    and flat (every language together in base_dir, with review_lang as a
-    column). Checks which shape is actually present rather than hardcoding
-    one - same helper as review_examples/show_review_examples.py."""
+    """step02's output has been observed in three layouts across this
+    project's lifetime: `base_dir/review_lang=<lang>/*.parquet`,
+    `base_dir/<lang>/*.parquet` (the archived corpus), and flat (every
+    language together in base_dir, with review_lang as a column). Checks
+    which shape is actually present rather than hardcoding one."""
     base_dir = Path(base_dir)
-    subfolder = base_dir / f"review_lang={lang}"
-    return subfolder if subfolder.is_dir() else base_dir
+    for candidate in (base_dir / f"review_lang={lang}", base_dir / lang):
+        if candidate.is_dir():
+            return candidate
+    return base_dir
 
 
 def label_toxicity(df: pd.DataFrame) -> pd.DataFrame:
@@ -59,36 +70,62 @@ def label_toxicity(df: pd.DataFrame) -> pd.DataFrame:
 
 def iter_scored_reviews(step02_dir: Path, lang: str, columns: list):
     """Yields (labeled_frame, n_read, n_dropped_invalid) one step02 file at
-    a time, already filtered to `lang` and already carrying `is_toxic`.
+    a time, already restricted to `lang` and already carrying `is_toxic`.
 
     `columns` are the payload columns the caller needs on top of the two
-    score columns; the language columns are added and dropped internally.
+    score columns; the score and language columns are handled internally.
+
+    The language restriction comes from whichever mechanism the layout on
+    disk provides. When the files carry `review_lang` and
+    `perspective_declared_language`, both must equal `lang` - the agreement
+    mask step02 applies before writing. When the files are partitioned into
+    a per-language folder instead, that partition *is* the restriction and
+    there is nothing left to filter, so re-applying a mask would only drop
+    rows for lacking a column the layout made redundant.
     """
     source = resolve_lang_source(step02_dir, lang)
-    is_subfolder = source != Path(step02_dir)
+    available = set(pq.ParquetFile(list_parquet_files(source)[0]).schema_arrow.names)
 
+    detox_column = next((c for c in DETOXIFY_COLUMNS if c in available), None)
+    if detox_column is None:
+        raise SystemExit(
+            f"No Detoxify score column in {source}: expected one of {DETOXIFY_COLUMNS}."
+        )
+
+    lang_columns = [c for c in ("review_lang", "perspective_declared_language") if c in available]
     read_columns = list(dict.fromkeys(
-        list(columns) + ["perspective_score", "detoxify_score", "perspective_declared_language"]
-        + ([] if is_subfolder else ["review_lang"])
+        list(columns) + ["perspective_score", detox_column] + lang_columns
     ))
 
     for path in list_parquet_files(source):
         df = pd.read_parquet(path, columns=read_columns)
-        if is_subfolder:
-            df["review_lang"] = lang
+        if detox_column != "detoxify_score":
+            df = df.rename(columns={detox_column: "detoxify_score"})
 
         n_read = len(df)
-        df = df[(df["review_lang"] == lang) & (df["perspective_declared_language"] == lang)]
-        df = df.drop(columns=["review_lang", "perspective_declared_language"])
+        for column in lang_columns:
+            df = df[df[column] == lang]
+        df = df.drop(columns=lang_columns)
 
         n_after_mask = len(df)
         df = label_toxicity(df)
         yield df, n_read, n_after_mask - len(df)
 
 
+def normalize_game_id(values: pd.Series) -> pd.Series:
+    """`game_id` is a Steam AppID, but it is stored as a string in the
+    review tables and as an integer in the games table. Joining the two
+    without a cast silently matches nothing and every tag comes back empty,
+    so both sides are coerced to the same nullable integer here. Anything
+    non-numeric becomes <NA> and simply fails to join, rather than joining
+    to the wrong game."""
+    return pd.to_numeric(values, errors="coerce").astype("Int64")
+
+
 def load_games(games_path: Path) -> pd.DataFrame:
     """step01's cleaned games table, slimmed to what the tag figures need."""
     games = pd.read_parquet(games_path, columns=["game_id", "popular_tags"])
+    games["game_id"] = normalize_game_id(games["game_id"])
     info(f"Loaded {len(games)} game(s) from {games_path}")
     return games
 
