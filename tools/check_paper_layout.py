@@ -49,7 +49,10 @@ TEXT_WIDTH_IN = 7.0
 COLUMN_WIDTH_IN = 3.3125
 EXPECTED = {
     "top-10-tags-tox.pdf": COLUMN_WIDTH_IN,
-    "heatmap_tfidf_tags.pdf": TEXT_WIDTH_IN,
+    # One column since the `figure*` was dropped: a double-column float can
+    # only be deferred to the top of a later page, which is what put this
+    # figure a page away from the paragraph citing it.
+    "heatmap_tfidf_tags.pdf": COLUMN_WIDTH_IN,
     "cdf-reviews-per-user.pdf": 0.30 * TEXT_WIDTH_IN,
     "cdf-library-size.pdf": 0.30 * TEXT_WIDTH_IN,
     "cdf-steam-level.pdf": 0.30 * TEXT_WIDTH_IN,

@@ -78,7 +78,7 @@ MEDIAN_LINESTYLE = (0, (1, 1.5))
 
 # Canvases, in the width LaTeX will give each figure.
 #   BAR      one column,  included at width=\columnwidth
-#   HEATMAP  both columns, included at width=\textwidth inside figure*
+#   HEATMAP  one column,   included at width=\columnwidth inside figure
 #   CDF      one panel of three, included at width=\linewidth inside a
 #            0.30\linewidth subfigure of a figure* -> 0.30 * 7.0 = 2.1in
 #   LEGEND   its own line above the three panels, included at
@@ -91,7 +91,7 @@ MEDIAN_LINESTYLE = (0, (1, 1.5))
 # precisely why its labels ended up at 4.17pt - so each canvas below is the
 # shortest one that still clears the 7pt floor, not the most comfortable.
 BAR_FIGSIZE = (COLUMN_WIDTH, 2.25)
-HEATMAP_FIGSIZE = (TEXT_WIDTH, 2.45)
+HEATMAP_FIGSIZE = (COLUMN_WIDTH, 3.05)
 CDF_FIGSIZE = (0.30 * TEXT_WIDTH, 1.50)
 LEGEND_FIGSIZE = (0.45 * TEXT_WIDTH, 0.24)
 
@@ -112,6 +112,38 @@ MIN_ALLOWED_FONTSIZE = 7  # AAAI's floor; assert_compliant checks against it
 # 9pt on a page that has no spare inches.
 BAR_FONTSIZE = 8
 
+# THE HEATMAP WAS A `figure*` SPANNING BOTH COLUMNS, AND IT COST MORE THAN
+# THE WIDTH IT BOUGHT. A double-column float cannot be placed on the page
+# that is being typeset when LaTeX reads it: `\@dbltoplist` only ever
+# defers it to the TOP of a later page, and `[htb]` is silently ignored.
+# The figure was declared right after the paragraph that cites it and
+# landed one page further on, which is what the editors saw.
+#
+# At one column the canvas is 3.3125in instead of 7.0in, so the constraint
+# is no longer height but the width of a cell. `0.087` in 7pt Times is
+# about 15.8pt wide; ten of those, plus the term labels and the colorbar,
+# need roughly 278pt in a 238.5pt column, and the annotations collide.
+#
+# The way out is to rescale the VALUES rather than the figure. Every mean
+# here falls between 0.008 and 0.088, so printing them in units of 10^-3
+# turns five glyphs into two, drops the cell to about 7pt of type, and the
+# grid fits a single column with nothing lost - same ten tags, same twelve
+# terms, same shared scale, every cell still carrying its own number. The
+# caption states the unit.
+HEATMAP_FONTSIZE = 7
+HEATMAP_ANNOTATION_SCALE = 1000  # cells and colorbar ticks print value*1000
+
+# AND NOT `($\times 10^{-3}$)` IN THE COLORBAR LABEL: mathtext shrinks a
+# superscript to MATHTEXT_SHRINK of the base, so at HEATMAP_FONTSIZE the
+# exponent lands at 4.9pt, under the floor, in a figure whose every other
+# label passes. Setting just this label at 10pt would put the exponent at
+# exactly 7.0pt and work, but it is then the only string in the figure
+# above 7pt and the size jump reads as an error rather than a hierarchy.
+# The unit is stated in plain words here and as math in the LaTeX caption,
+# where the surrounding type is already 10pt and the exponent costs
+# nothing.
+HEATMAP_COLORBAR_LABEL = "Mean TF-IDF Score (per 1,000)"
+
 # MATHTEXT SHRINKS SUPERSCRIPTS TO 0.7 OF THE BASE, AND THE FLOOR APPLIES
 # TO THE SUPERSCRIPT TOO. A log axis labels its ticks "10^0, 10^1, ...",
 # and the exponent is the smallest type in the whole figure: at a 9pt base
@@ -131,7 +163,15 @@ GRID_LINEWIDTH = 0.5
 
 RC_PARAMS = {
     "font.family": "serif",
-    "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+    # Liberation Serif and Nimbus Roman are metric-compatible Times clones
+    # and sit ahead of DejaVu Serif on purpose: a box without the Microsoft
+    # font (any Linux CI runner, for one) then still renders these figures
+    # in Times metrics instead of silently falling back to a wider face
+    # that changes every label width and does not match the other figures.
+    "font.serif": [
+        "Times New Roman", "Times", "Liberation Serif", "Nimbus Roman",
+        "DejaVu Serif",
+    ],
     "mathtext.fontset": "custom",
     "mathtext.rm": "Times New Roman",
     "mathtext.it": "Times New Roman:italic",

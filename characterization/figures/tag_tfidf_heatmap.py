@@ -259,12 +259,17 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
     `sucks` never reaches under Puzzle. Because the scale is shared, the
     light end of the grid is hard to read off the color alone - which is
     why every cell is annotated rather than left to the colorbar.
+
+    Cells and colorbar ticks are printed in units of 10^-3. That is what
+    lets a twelve-by-ten annotated grid hold its 7pt type inside one
+    3.3125in column instead of a `figure*` spanning both - see
+    plotting.HEATMAP_FONTSIZE for the width arithmetic. The LaTeX caption
+    states the unit.
     """
-    plotting.apply_style(plotting.BODY_FONTSIZE)
-    plotting.assert_compliant(
-        [plotting.BODY_FONTSIZE, plotting.SMALL_FONTSIZE], "heatmap_tfidf_tags"
-    )
+    plotting.apply_style(plotting.HEATMAP_FONTSIZE)
+    plotting.assert_compliant([plotting.HEATMAP_FONTSIZE], "heatmap_tfidf_tags")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
 
     data = means.to_numpy(dtype="float64")
     fig, ax = plt.subplots(figsize=plotting.HEATMAP_FIGSIZE, layout="constrained")
@@ -279,7 +284,7 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
     ax.set_xticklabels(means.columns, rotation=45, ha="right", rotation_mode="anchor")
     ax.set_yticks([i + 0.5 for i in range(len(means.index))])
     ax.set_yticklabels(means.index)
-    ax.set_ylabel("Term", fontsize=plotting.BODY_FONTSIZE)
+    ax.set_ylabel("Term", fontsize=plotting.HEATMAP_FONTSIZE)
     # No invert_yaxis: pcolormesh puts row 0 at the bottom, and `means` is
     # ordered strongest-first, so the most salient term lands on the bottom
     # row - the published orientation, weakest at the top.
@@ -297,15 +302,25 @@ def plot_heatmap(means: pd.DataFrame, output_path: Path) -> Path:
             if pd.isna(value):
                 continue
             ax.text(
-                col + 0.5, row + 0.5, f"{value:.3f}",
+                col + 0.5, row + 0.5,
+                f"{value * plotting.HEATMAP_ANNOTATION_SCALE:.0f}",
                 ha="center", va="center",
                 color="white" if value > switch else "black",
-                fontsize=plotting.SMALL_FONTSIZE,
+                fontsize=plotting.HEATMAP_FONTSIZE,
             )
 
-    colorbar = fig.colorbar(image, ax=ax, fraction=0.025, pad=0.015)
-    colorbar.set_label("Mean TF-IDF Score", fontsize=plotting.SMALL_FONTSIZE)
-    colorbar.ax.tick_params(labelsize=plotting.SMALL_FONTSIZE)
+    colorbar = fig.colorbar(image, ax=ax, fraction=0.030, pad=0.020)
+    colorbar.set_label(
+        plotting.HEATMAP_COLORBAR_LABEL, fontsize=plotting.HEATMAP_FONTSIZE
+    )
+    colorbar.ax.tick_params(labelsize=plotting.HEATMAP_FONTSIZE)
+    # The ticks carry the same x1000 rescale as the cells, so the bar and
+    # the numbers printed on it cannot drift apart.
+    colorbar.ax.yaxis.set_major_formatter(
+        FuncFormatter(
+            lambda value, _: f"{value * plotting.HEATMAP_ANNOTATION_SCALE:.0f}"
+        )
+    )
 
     saved = plotting.save_figure(
         fig, output_path, expected_width=plotting.HEATMAP_FIGSIZE[0]
