@@ -292,6 +292,10 @@ These four confirmatory comparisons are transcribed from the accepted paper. The
 
 The measurements rest on tool-derived labels. Toxicity is operationalized through two automatic detectors, Perspective API and Detoxify, whose thresholds were calibrated on 400 reviews labeled by three annotators, so the labels inherit both tools' error profiles. The primary count label is sensitive to activity volume, since more active users have more chances to produce at least one toxic review; the complementary rate label mitigates but does not remove this. Content-based models are partially circular because they read the reviews that define the label, which is exactly why the leave-toxic-out control matters. The corpus is English-only, from a single collection window, and covers the 43.7 percent of users whose histories could be matched to a public profile. The LLM classifier comparison rests on 1,000 users with only 40 positives, so its estimates are wide, and inter-judge agreement in the narrative panel is weak. See [docs/ethics.md](docs/ethics.md) for the full treatment.
 
+## Trained model
+
+The final end-to-end DistilBERT checkpoint is available on Hugging Face at [vkusterl/toxic-steam-user-distilbert](https://huggingface.co/vkusterl/toxic-steam-user-distilbert). It was retrained with the recipe of `src/up_bert_user.py --undersample` on the same sample of 60,000 users and then evaluated on 60,000 users outside that sample, at the real prevalence of 3.97 percent. It reaches an AUC-PR of 0.648 (95% bootstrap interval from 0.630 to 0.668), in line with the 0.643 reported in the paper. The model card describes the input format, the decision threshold and the limits of use.
+
 ## Citation
 
 The paper has been accepted at AIIDE 2026. Page numbers and DOI will be added when the proceedings are published.
